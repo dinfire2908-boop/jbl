@@ -1,22 +1,26 @@
 const express = require('express');
-const { Innertube } = require('youtubei.js');
 const app = express();
 
-app.get('/', (req,res)=> res.send('JBL V7.2 OK - SEM 429 - FINAL'));
+const INSTANCES = [
+  "https://inv.tux.pizza",
+  "https://invidious.nerdvpn.de",
+  "https://inv.nadeko.net"
+];
+
+app.get('/', (req,res)=> res.send('JBL V7.2 ONLINE - SEM PIPED'));
 
 app.get('/youtube/play', async (req,res)=>{
   const id = req.query.id;
   if(!id) return res.status(400).send('sem id');
-  try {
-    const yt = await Innertube.create();
-    const info = await yt.getInfo(id);
-    const format = info.chooseFormat({ type: 'audio', quality: 'best' });
-    const url = format.decipher(yt.session.player);
-    return res.redirect(url);
-  } catch(e){
-    console.log(e);
-    return res.redirect(`https://inv.tux.pizza/latest_version?id=${id}&itag=140`);
+  
+  for(let base of INSTANCES){
+    try{
+      let r = await fetch(`${base}/latest_version?id=${id}&itag=140`, {redirect:'manual'});
+      let loc = r.headers.get('location');
+      if(loc) return res.redirect(loc);
+    }catch(e){ console.log('falhou', base); }
   }
+  res.status(500).send('tenta de novo');
 });
 
-app.listen(process.env.PORT||3000, ()=>console.log('V7.2 ON'));
+app.listen(process.env.PORT || 3000, ()=>console.log('ON'));
