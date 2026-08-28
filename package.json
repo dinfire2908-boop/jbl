@@ -1,26 +1,18 @@
 const express = require('express');
 const app = express();
-
-const INSTANCES = [
-  "https://inv.tux.pizza",
-  "https://invidious.nerdvpn.de",
-  "https://inv.nadeko.net"
-];
-
-app.get('/', (req,res)=> res.send('JBL V7.2 ONLINE - SEM PIPED'));
-
+app.get('/', (req,res)=> res.send('OK V7.3'));
 app.get('/youtube/play', async (req,res)=>{
-  const id = req.query.id;
-  if(!id) return res.status(400).send('sem id');
-  
-  for(let base of INSTANCES){
-    try{
-      let r = await fetch(`${base}/latest_version?id=${id}&itag=140`, {redirect:'manual'});
-      let loc = r.headers.get('location');
-      if(loc) return res.redirect(loc);
-    }catch(e){ console.log('falhou', base); }
-  }
-  res.status(500).send('tenta de novo');
+  try{
+    const id = req.query.id;
+    const r = await fetch(`https://youtubei.googleapis.com/youtubei/v1/player?key=AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({videoId:id, context:{client:{clientName:'ANDROID', clientVersion:'20.07.34'}}})
+    });
+    const j = await r.json();
+    const url = j.streamingData?.adaptiveFormats?.find(f=>f.mimeType?.includes('audio'))?.url;
+    if(!url) return res.status(500).send('sem audio');
+    res.redirect(url);
+  }catch(e){ res.status(500).send(e.message) }
 });
-
-app.listen(process.env.PORT || 3000, ()=>console.log('ON'));
+app.listen(process.env.PORT||3000);
