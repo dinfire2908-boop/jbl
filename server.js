@@ -1,38 +1,29 @@
 const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 8080;
-
-app.get('/', (req,res)=>res.send('JBL V5 OK'));
-
+app.get('/', (req,res)=>res.send('JBL V6 OK - SEM 429'));
 app.get('/youtube/play', async (req,res)=>{
-  const id = req.query.id;
+  const id=req.query.id;
   if(!id) return res.status(400).send('sem id');
   try{
-    const body = {
-      context: { client: { clientName: "ANDROID", clientVersion: "19.09.37", androidSdkVersion: 30 } },
-      videoId: id
-    };
-    const r = await fetch('https://www.youtube.com/youtubei/v1/player?key=AIzaSyA8eiZmM1Fa_Df1-N8d0yJ3Jq6A', {
+    // Metodo 1: YouTube Android
+    const r = await fetch('https://www.youtube.com/youtubei/v1/player?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(body)
+      headers:{'Content-Type':'application/json','User-Agent':'com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip'},
+      body: JSON.stringify({videoId:id, context:{client:{clientName:"ANDROID",clientVersion:"19.09.37",androidSdkVersion:30}}})
     });
-    const data = await r.json();
-    const formats = [...(data.streamingData?.adaptiveFormats||[]),...(data.streamingData?.formats||[])];
-    let audio = formats.filter(f=>f.mimeType?.includes('audio')).sort((a,b)=> (b.bitrate||0)-(a.bitrate||0))[0];
-    if(!audio?.url && audio?.signatureCipher){
-      // precisa decipher, pega outro com url
-      audio = formats.find(f=>f.url && f.mimeType?.includes('audio'));
-    }
+    const j = await r.json();
+    const fmts = [...(j.streamingData?.adaptiveFormats||[]),...(j.streamingData?.formats||[])];
+    const audio = fmts.filter(f=>f.mimeType&&f.mimeType.includes('audio')).sort((a,b)=>(b.bitrate||0)-(a.bitrate||0))[0];
     if(audio?.url){
-      console.log("SUCESSO V5: "+id);
+      console.log("V6 OK "+id);
       return res.redirect(302, audio.url);
     }
-    console.log("SEM URL", JSON.stringify(data).slice(0,500));
-    res.status(500).send('sem audio url');
+    console.log("FALHA V6 sem url");
+    return res.status(500).json(j);
   }catch(e){
-    console.log("ERRO V5", e.message);
-    res.status(500).send('erro v5: '+e.message);
+    console.log("ERRO V6 "+e.message);
+    res.status(500).send(e.message);
   }
 });
-app.listen(PORT,'0.0.0.0',()=>console.log("V5 rodando"));
+app.listen(PORT,'0.0.0.0',()=>console.log("V6 ON"));
